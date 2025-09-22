@@ -1,0 +1,6 @@
+fastapi[all]
+google-generativeai
+pandas
+Pillow
+pdf2image
+openpyxl
