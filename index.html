@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Converter</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f2f5; }
+        .container { text-align: center; padding: 50px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background-color: white; max-width: 500px; }
+        h1 { color: #1c1e21; }
+        p { color: #606770; margin-bottom: 25px;}
+        input[type="file"] { border: 1px solid #ddd; padding: 10px; border-radius: 6px; margin: 20px 0; display: block; margin: 20px auto; }
+        button { background-color: #1877f2; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s; margin: 5px; }
+        button:hover { background-color: #166fe5; }
+        .secondary-button { background-color: #36a420; }
+        .secondary-button:hover { background-color: #2b821a; }
+        #loader { display: none; margin-top: 20px; color: #606770;}
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Your Document</h1>
+        <p>Choose an export option below.</p>
+        <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png">
+        <br>
+        <button onclick="processFile('template')">Convert to CSV (Template)</button>
+        <button onclick="processFile('excel')" class="secondary-button">Convert to Excel (As-Is)</button>
+        <p id="loader" style="display: none;">Processing, please wait... This may take a minute.</p>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        async function processFile(type) {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const statusEl = document.getElementById('status');
+            const loaderEl = document.getElementById('loader');
+
+            if (!file) {
+                statusEl.innerText = "Please select a file first.";
+                statusEl.style.color = "red";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            statusEl.innerText = "";
+            loaderEl.style.display = 'block';
+
+            let endpoint = '';
+            let filename = '';
+
+            if (type === 'template') {
+                endpoint = 'http://127.0.0.1:8000/process-document/';
+                filename = 'converted_template.csv';
+            } else {
+                endpoint = 'http://127.0.0.1:8000/export-to-excel/';
+                filename = 'exported_data.xlsx';
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    statusEl.innerText = "Success! Your file is downloading.";
+                    statusEl.style.color = "green";
+                } else {
+                    const error = await response.json();
+                    statusEl.innerText = `Error: ${error.detail}`;
+                    statusEl.style.color = "red";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                statusEl.innerText = 'An error occurred. Make sure the Python server is running.';
+                statusEl.style.color = "red";
+            } finally {
+                loaderEl.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
